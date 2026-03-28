@@ -24,6 +24,10 @@ This is not a true Euclidean raster rotation. It is a reversible permutation-lik
 pip install toroidal-rotate
 ```
 
+## Showcase
+
+![Toroidal rotate showcase](docs/showcase.gif)
+
 ## Usage
 
 ### Example 1: grayscale round-trip
@@ -79,6 +83,12 @@ python -m build
 twine upload --repository testpypi dist/*
 # after checking it works
 twine upload dist/*
+```
+
+To regenerate the demo GIF:
+
+```bash
+PYTHONPATH=src python scripts/make_showcase_gif.py
 ```
 
 ## License
