@@ -26,7 +26,9 @@ pip install toroidal-rotate
 
 ## Showcase
 
-![Toroidal rotate showcase](docs/showcase.gif)
+![Toroidal rotate showcase](https://raw.githubusercontent.com/MarcelDev-u/toroidal-rotate/main/docs/showcase.gif)
+
+Direct file: [`docs/showcase.gif`](docs/showcase.gif)
 
 ## Usage
 
