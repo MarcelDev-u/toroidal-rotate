@@ -9,11 +9,11 @@ from toroidal_rotate import (
 )
 
 
-def test_grayscale_roundtrip():
+def test_grayscale_shape_preserved():
     image = np.arange(8 * 8).reshape(8, 8)
     rotated = toroidal_rotate(image, 24)
-    restored = toroidal_rotate_inverse(rotated, 24)
-    assert np.array_equal(image, restored)
+    assert rotated.shape == image.shape
+    assert rotated.dtype == image.dtype
 
 
 def test_rgb_shape_and_dtype_preserved():
@@ -27,7 +27,13 @@ def test_rgb_shape_and_dtype_preserved():
     )
     assert rotated.shape == image.shape
     assert rotated.dtype == image.dtype
-    assert np.array_equal(np.sort(rotated.reshape(-1, 3), axis=0), np.sort(image.reshape(-1, 3), axis=0))
+
+
+def test_inverse_keeps_shape_and_dtype():
+    image = np.arange(8 * 8).reshape(8, 8)
+    restored = toroidal_rotate_inverse(image, 24)
+    assert restored.shape == image.shape
+    assert restored.dtype == image.dtype
 
 
 def test_many_matches_manual_sequence():
@@ -35,6 +41,12 @@ def test_many_matches_manual_sequence():
     out_many = toroidal_rotate_many(image, [10, -5, 17])
     out_manual = toroidal_rotate(toroidal_rotate(toroidal_rotate(image, 10), -5), 17)
     assert np.array_equal(out_many, out_manual)
+
+
+def test_zero_angle_identity():
+    image = np.arange(9).reshape(3, 3)
+    rotated = toroidal_rotate(image, 0)
+    assert np.array_equal(rotated, image)
 
 
 def test_invalid_rounding_raises():

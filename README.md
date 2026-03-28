@@ -1,22 +1,21 @@
 # toroidal-rotate
 
-`toroidal-rotate` is a small NumPy utility for deterministic, reversible toroidal pseudo-rotation of raster images.
+`toroidal-rotate` is a small NumPy utility for periodic raster rotation of toroidally tiling images.
 
-It keeps the same array shape, preserves pixel values exactly, and uses wraparound boundaries. It does not interpolate, blur, or average values.
+It keeps the same array shape, uses wraparound boundaries, and rotates by inverse-mapped sampling on the periodic image domain.
 
 ## What it is
 
-The transform is built from three integer shears on a toroidal grid:
+The transform is:
 
 - deterministic
-- reversible
 - same output shape as input
-- exact value preservation
+- periodic under square tiling
 - works on grayscale `(H, W)` and channels-last `(H, W, C)` arrays
 
 ## What it is not
 
-This is not a true Euclidean raster rotation. It is a reversible permutation-like transform that looks rotation-like. Repeatedly applying many small angles is not equivalent to exact cumulative rotation.
+This is not an exact Euclidean rotation. It is a periodic raster approximation using wrapped inverse sampling, so inverse rotation is approximate rather than exact and repeated small angles are not numerically exact cumulative rotation.
 
 ## Installation
 
@@ -32,19 +31,16 @@ Direct file: [`docs/showcase.gif`](docs/showcase.gif)
 
 ## Usage
 
-### Example 1: grayscale round-trip
+### Example 1: grayscale periodic rotation
 
 ```python
 import numpy as np
 
-from toroidal_rotate import toroidal_rotate, toroidal_rotate_inverse
+from toroidal_rotate import toroidal_rotate
 
 image = np.arange(8 * 8).reshape(8, 8)
 
 rotated = toroidal_rotate(image, 24)
-restored = toroidal_rotate_inverse(rotated, 24)
-
-print(np.array_equal(image, restored))  # True
 ```
 
 ### Example 2: RGB image
@@ -76,6 +72,8 @@ from toroidal_rotate import (
     toroidal_rotate_many,
 )
 ```
+
+`toroidal_rotate_inverse` applies the matching wrapped inverse angle, but due to raster quantization it is approximate rather than exact round-trip restoration.
 
 ## Build and publish
 

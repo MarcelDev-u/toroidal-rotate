@@ -74,52 +74,39 @@ def _quantize(values: NDArray[np.float64], mode: RoundingMode) -> NDArray[np.int
     raise ToroidalRotationError(f"Internal error: unsupported rounding mode {mode!r}.")
 
 
-def _roll_rows(image: ArrayLikeImage, shifts: NDArray[np.int64]) -> ArrayLikeImage:
-    height = image.shape[0]
-    if shifts.shape != (height,):
-        raise ToroidalRotationError(
-            f"Expected row shifts of shape {(height,)}, got {shifts.shape}."
-        )
-
-    out = np.empty_like(image)
-    for row_index in range(height):
-        out[row_index] = np.roll(image[row_index], int(shifts[row_index]), axis=0)
-    return out
-
-
-def _roll_columns(image: ArrayLikeImage, shifts: NDArray[np.int64]) -> ArrayLikeImage:
-    width = image.shape[1]
-    if shifts.shape != (width,):
-        raise ToroidalRotationError(
-            f"Expected column shifts of shape {(width,)}, got {shifts.shape}."
-        )
-
-    out = np.empty_like(image)
-    for column_index in range(width):
-        out[:, column_index] = np.roll(image[:, column_index], int(shifts[column_index]), axis=0)
-    return out
-
-
-def _compute_shear_shifts(
+def _compute_wrapped_source_indices(
     shape: tuple[int, int],
     angle_degrees: float,
     rounding: RoundingMode,
     center: CenterMode,
-) -> tuple[NDArray[np.int64], NDArray[np.int64], NDArray[np.int64]]:
+) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
     height, width = shape
 
     theta = np.deg2rad(angle_degrees)
-    a = -np.tan(theta / 2.0)
-    b = np.sin(theta)
+    cos_theta = np.cos(theta)
+    sin_theta = np.sin(theta)
 
-    y_coords = _centered_coordinates(height, center)
-    x_coords = _centered_coordinates(width, center)
+    y_coords = _centered_coordinates(height, center)[:, None]
+    x_coords = _centered_coordinates(width, center)[None, :]
 
-    row_shifts_first = _quantize(a * y_coords, rounding)
-    column_shifts = _quantize(b * x_coords, rounding)
-    row_shifts_second = _quantize(a * y_coords, rounding)
+    # Inverse-map from output grid to input grid so the result stays periodic
+    # under the same square tiling basis.
+    src_x = cos_theta * x_coords + sin_theta * y_coords
+    src_y = -sin_theta * x_coords + cos_theta * y_coords
 
-    return row_shifts_first, column_shifts, row_shifts_second
+    if center == "pixel_center":
+        src_x = src_x + (width - 1) / 2.0
+        src_y = src_y + (height - 1) / 2.0
+
+    src_x_idx = _quantize(src_x, rounding) % width
+    src_y_idx = _quantize(src_y, rounding) % height
+    return src_y_idx, src_x_idx
+
+
+def _sample_wrapped(image: ArrayLikeImage, y_idx: NDArray[np.int64], x_idx: NDArray[np.int64]) -> ArrayLikeImage:
+    if image.ndim == 2:
+        return image[y_idx, x_idx]
+    return image[y_idx, x_idx, :]
 
 
 @overload
@@ -143,11 +130,11 @@ def toroidal_rotate(
     copy: bool = True,
 ) -> ArrayLikeImage:
     """
-    Apply deterministic reversible toroidal pseudo-rotation to an image.
+    Apply wrapped periodic raster rotation to an image.
 
-    This is a same-shape, interpolation-free pixel permutation built from
-    three integer shears on a toroidal grid. It is reversible, but it is not
-    a true Euclidean raster rotation.
+    This performs inverse-mapped sampling on a periodic image domain, so the
+    result remains compatible with square tiling under the same wrap basis.
+    It is still a raster approximation because coordinates are quantized.
     """
     _validate_image(image)
     _validate_rounding(rounding)
@@ -160,17 +147,13 @@ def toroidal_rotate(
 
     working = image.copy() if copy else image
 
-    row_1, col, row_2 = _compute_shear_shifts(
+    y_idx, x_idx = _compute_wrapped_source_indices(
         shape=working.shape[:2],
         angle_degrees=angle_degrees,
         rounding=rounding,
         center=center,
     )
-
-    out = _roll_rows(working, row_1)
-    out = _roll_columns(out, col)
-    out = _roll_rows(out, row_2)
-    return out
+    return _sample_wrapped(working, y_idx, x_idx)
 
 
 def toroidal_rotate_inverse(
@@ -181,7 +164,7 @@ def toroidal_rotate_inverse(
     center: CenterMode = "pixel_center",
     copy: bool = True,
 ) -> ArrayLikeImage:
-    """Apply the exact inverse of `toroidal_rotate`."""
+    """Apply the wrapped inverse rotation approximation of `toroidal_rotate`."""
     _validate_image(image)
     _validate_rounding(rounding)
     _validate_center(center)
@@ -193,17 +176,13 @@ def toroidal_rotate_inverse(
 
     working = image.copy() if copy else image
 
-    row_1, col, row_2 = _compute_shear_shifts(
-        shape=working.shape[:2],
-        angle_degrees=angle_degrees,
+    return toroidal_rotate(
+        working,
+        -angle_degrees,
         rounding=rounding,
         center=center,
+        copy=False,
     )
-
-    out = _roll_rows(working, -row_2)
-    out = _roll_columns(out, -col)
-    out = _roll_rows(out, -row_1)
-    return out
 
 
 def toroidal_rotate_many(
@@ -216,8 +195,8 @@ def toroidal_rotate_many(
     """
     Apply multiple toroidal pseudo-rotations sequentially.
 
-    This remains stepwise reversible, but repeated small angles should not be
-    treated as numerically faithful cumulative rotation.
+    This remains periodic on the wrapped square domain, but repeated small
+    angles should not be treated as numerically faithful cumulative rotation.
     """
     _validate_image(image)
     _validate_rounding(rounding)
