@@ -21,7 +21,7 @@ This is not a true Euclidean raster rotation. It is a reversible permutation-lik
 ## Installation
 
 ```bash
-pip install playfull-toroidal-rotate
+pip install toroidal-rotate
 ```
 
 ## Usage

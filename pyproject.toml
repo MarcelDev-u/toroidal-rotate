@@ -3,7 +3,7 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "playfull-toroidal-rotate"
+name = "toroidal-rotate"
 version = "0.1.0"
 description = "Deterministic reversible toroidal pseudo-rotation for NumPy images"
 readme = "README.md"
@@ -35,9 +35,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/MarcelDev-u/playfull-toroidal-rotate"
-Repository = "https://github.com/MarcelDev-u/playfull-toroidal-rotate"
-Issues = "https://github.com/MarcelDev-u/playfull-toroidal-rotate/issues"
+Homepage = "https://github.com/MarcelDev-u/toroidal-rotate"
+Repository = "https://github.com/MarcelDev-u/toroidal-rotate"
+Issues = "https://github.com/MarcelDev-u/toroidal-rotate/issues"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

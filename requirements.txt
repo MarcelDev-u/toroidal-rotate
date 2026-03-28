@@ -1,6 +1,6 @@
 # Runtime
 numpy>=1.24
-playfull-toroidal-rotate==0.1.0
+toroidal-rotate==0.1.0
 
 # Development and release
 build>=1.2.2
